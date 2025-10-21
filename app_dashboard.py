@@ -1,89 +1,385 @@
-import gradio as gr
-from huggingface_hub import InferenceClient
-import os
+import streamlit as st
 import sys
+from pathlib import Path
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'movies_knowledge_base')))
-from src.application.search_cloud import search_movies_cloud as sear
+base_dir = Path(__file__).parent / 'movies_knowledge_base'
+sys.path.insert(0, str(base_dir.parent / 'movies_knowledge_base'))
 
-def welcome(name):
-    return f"Welcome to Gradio, {name}!"
+import chromadb
+from src.services.embedder import DocumentEmbedder
+from src.application.search_cloud import search_movies_cloud
+from src.config.chroma_config import CHROMA_API_KEY, CHROMA_TENANT, CHROMA_DATABASE
+from src.services.clustering import DocumentClusterer
+from src.services.anomaly_detection import AnomalyDetector
 
-css = """
-body {
-    background: #f5f5f5;
-}
-.gradio-container {
-    background: #f5f5f5 !important;
-}
-#warning {background-color: #f3dcd}
-.feedback textarea {font-size: 24px }
-.title {font-size: 32px !important; text-align: center;}
-"""
-
-
-
-def respond(
-    message,
-    history: list[dict[str, str]],
-    system_message,
-    max_tokens,
-    temperature,
-    top_p,
-):
-    """
-    For more information on `huggingface_hub` Inference API support, please check the docs: https://huggingface.co/docs/huggingface_hub/v0.22.2/en/guides/inference
-    """
-    response = ""
-
-    results = sear(message, n_results=5)
-
-    if results['documents'] and len(results['documents'][0]) > 0:
-        documents = results['documents'][0]
-        for i, doc in enumerate(documents, 1):
-            response += f"{i}. {doc}\n"
-    else:
-        response = "No results found."
-
-    yield response
-
-
-"""
-For information on how to customize the ChatInterface, peruse the gradio docs: https://www.gradio.app/docs/chatinterface
-"""
-chatbot = gr.ChatInterface(
-    respond,
-    type="messages",
-    additional_inputs=[
-       
-        gr.Textbox(value="You are a friendly Chatbot.", label="System message"),
-        gr.Slider(minimum=1, maximum=2048, value=512, step=1, label="Max new tokens"),
-        gr.Slider(minimum=0.1, maximum=4.0, value=0.7, step=0.1, label="Temperature"),
-        gr.Slider(
-            minimum=0.1,
-            maximum=1.0,
-            value=0.95,
-            step=0.05,
-            label="Top-p (nucleus sampling)",
-        ),
-    ],
+st.set_page_config(
+    page_title="Movies Knowledge Base",
+    page_icon="🎬",
+    layout="wide"
 )
 
-with gr.Blocks( css=css) as demo:
+@st.cache_resource
+def load_cloud_collection():
+    client = chromadb.CloudClient(
+        api_key=CHROMA_API_KEY,
+        tenant=CHROMA_TENANT,
+        database=CHROMA_DATABASE
+    )
+    collection = client.get_collection("movies_docs")
+    return collection
 
+@st.cache_resource
+def load_embedder():
+    """Load embeddings model"""
+    return DocumentEmbedder(model_name='all-MiniLM-L6-v2')
 
-    gr.HTML("""
-<center>
-    <img src='https://i.pinimg.com/originals/36/5e/68/365e6851d51814a090210f47911147ce.gif' 
-         alt='Chatbot Animation' 
-         width='300'
-         style='border-radius: 20px;'>
-</center>
-""")
-    gr.HTML("</center>")
-    chatbot.render()
+def main():
+    st.title("🎬 Movies Knowledge Base")
+    
+    collection = load_cloud_collection()
+    embedder = load_embedder()
+    
+    st.sidebar.title("Navigation")
+    page = st.sidebar.radio(
+        "Choose a page",
+        ["Overview", "Semantic Search", "Clustering", "Anomaly Detection"]
+    )
+    
+    if page == "Overview":
+        st.header("System Overview")
+        
+        total = collection.count()
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Total Movies", f"{total:,}")
+        
+        with col2:
+            st.metric("Embedding Dimension", "384")
+        
+        with col3:
+            st.metric("Vector DB", "Chroma Cloud")
+        
+        st.markdown("---")
+        st.info("""
+        **Final Project - DSML**
+        
+        Semantic movie search system using embeddings and ChromaDB.
+        """)
 
+    elif page == "Semantic Search":
+        st.header("Semantic Search")
+        
+        st.markdown("Search movies using natural language.")
+        
+        query = st.text_input("Enter your search:", placeholder="e.g., action movie with car chase")
+        n_results = st.slider("Number of results:", 1, 10, 5)
+        
+        if st.button("Search", type="primary"):
+            if query:
+                with st.spinner("Searching..."):
+                    results = search_movies_cloud(query, n_results=n_results)
+                
+                if results['documents'] and len(results['documents'][0]) > 0:
+                    st.success(f"Found {len(results['documents'][0])} results")
+                    
+                    for i, (doc, dist) in enumerate(zip(
+                        results['documents'][0],
+                        results['distances'][0]
+                    ), 1):
+                        similarity = (2 - dist) / 2 * 100
+                        title = doc.split('\n')[0]
+                        with st.expander(f"{i}. {title} - Similarity: {similarity:.1f}%"):
+                            st.text(doc[:500])
+                else:
+                    st.warning("No results found.")
+            else:
+                st.warning("Please enter a search query.")
+    
+    elif page == "Clustering":
+        st.header("Document Clustering")
+        
+        st.markdown("Automatically group similar movies.")
+        
+        algorithm = st.selectbox("Algorithm", ["K-Means", "DBSCAN"])
+        
+        if algorithm == "K-Means":
+            n_clusters = st.slider("Number of Clusters", 3, 15, 8)
+        else:
+            eps = st.slider("Epsilon", 0.3, 1.5, 0.5, 0.1)
+            min_samples = st.slider("Min samples", 3, 10, 5)
+        
+        if st.button("Run Clustering", type="primary"):
+            with st.spinner(f"Running {algorithm}..."):
+                base_path = Path(__file__).parent / 'movies_knowledge_base'
+                embeddings_dir = base_path / 'data/processed/embeddings'
+                
+                try:
+                    clusterer = DocumentClusterer(str(embeddings_dir))
+                    
+                    if algorithm == "K-Means":
+                        labels = clusterer.cluster_kmeans(n_clusters=n_clusters)
+                    else:
+                        labels = clusterer.cluster_dbscan(eps=eps, min_samples=min_samples)
+                    
+                    analysis = clusterer.analyze_clusters()
+                    
+                    st.success("Clustering completed!")
+                    
+                    st.subheader("Cluster Analysis")
+                    st.dataframe(analysis[['cluster_name', 'n_documents', 'percentage']], use_container_width=True)
+                    
+                    st.subheader("Examples per Cluster")
+                    for _, row in analysis.head(5).iterrows():
+                        with st.expander(f"{row['cluster_name']} - {row['n_documents']} movies"):
+                            for title in row['sample_titles'][:3]:
+                                st.markdown(f"- {title}")
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+                    st.info("Clustering requires local embeddings. Run the pipeline first.")
+    
+    elif page == "Anomaly Detection":
+        st.header("Anomaly Detection")
+        
+        st.markdown("Identify unusual or problematic documents.")
+        
+        method = st.selectbox("Method", ["Isolation Forest", "Local Outlier Factor"])
+        contamination = st.slider("Expected % of anomalies", 0.01, 0.15, 0.05, 0.01)
+        
+        if st.button("Detect Anomalies", type="primary"):
+            with st.spinner(f"Running {method}..."):
+                base_path = Path(__file__).parent / 'movies_knowledge_base'
+                embeddings_dir = base_path / 'data/processed/embeddings'
+                
+                try:
+                    detector = AnomalyDetector(str(embeddings_dir))
+                    
+                    if method == "Isolation Forest":
+                        scores, is_anomaly = detector.detect_isolation_forest(contamination=contamination)
+                    else:
+                        scores, is_anomaly = detector.detect_lof(contamination=contamination)
+                    
+                    st.success("Detection completed!")
+                    
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.metric("Anomalies Detected", f"{is_anomaly.sum():,}")
+                    
+                    with col2:
+                        st.metric("Percentage", f"{(is_anomaly.sum()/len(is_anomaly)*100):.1f}%")
+
+                    st.subheader("Top 5 Anomalies")
+
+                    top_anomalies = detector.get_top_anomalies(n=5)
+
+                    for i, anom in enumerate(top_anomalies, 1):
+                        title = anom['text'].split('\n')[0] if '\n' in anom['text'] else anom['text'][:80]
+                        with st.expander(f"{i}. {title}"):
+                            st.text(anom['text'][:400])
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+                    st.info("Anomaly detection requires local embeddings. Run the pipeline first.")
+    
+    st.sidebar.markdown("---")
+    st.sidebar.caption("☁️ Powered by Chroma Cloud")
 
 if __name__ == "__main__":
-    demo.launch()
+    main()
+
+"""
+Interactive Streamlit Dashboard
+Visual exploration interface for Movies Knowledge Base
+"""
+
+import streamlit as st
+import sys
+from pathlib import Path
+
+base_dir = Path(__file__).parent / 'movies_knowledge_base'
+sys.path.insert(0, str(base_dir.parent / 'movies_knowledge_base'))
+
+import chromadb
+from src.services.embedder import DocumentEmbedder
+from src.application.search_cloud import search_movies_cloud
+from src.config.chroma_config import CHROMA_API_KEY, CHROMA_TENANT, CHROMA_DATABASE
+from src.services.clustering import DocumentClusterer
+from src.services.anomaly_detection import AnomalyDetector
+
+st.set_page_config(
+    page_title="Movies Knowledge Base",
+    page_icon="🎬",
+    layout="wide"
+)
+
+@st.cache_resource
+def load_cloud_collection():
+    client = chromadb.CloudClient(
+        api_key=CHROMA_API_KEY,
+        tenant=CHROMA_TENANT,
+        database=CHROMA_DATABASE
+    )
+    collection = client.get_collection("movies_docs")
+    return collection
+
+@st.cache_resource
+def load_embedder():
+    """Load embeddings model"""
+    return DocumentEmbedder(model_name='all-MiniLM-L6-v2')
+
+def main():
+    st.title("🎬 Movies Knowledge Base")
+    
+    collection = load_cloud_collection()
+    embedder = load_embedder()
+    
+    st.sidebar.title("Navigation")
+    page = st.sidebar.radio(
+        "Choose a page",
+        ["Overview", "Semantic Search", "Clustering", "Anomaly Detection"]
+    )
+    
+    if page == "Overview":
+        st.header("System Overview")
+        
+        total = collection.count()
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Total Movies", f"{total:,}")
+        
+        with col2:
+            st.metric("Embedding Dimension", "384")
+        
+        with col3:
+            st.metric("Vector DB", "Chroma Cloud")
+        
+        st.markdown("---")
+        st.info("""
+        **Final Project - DSML**
+        
+        Semantic movie search system using embeddings and ChromaDB.
+        """)
+
+    elif page == "Semantic Search":
+        st.header("Semantic Search")
+        
+        st.markdown("Search movies using natural language.")
+        
+        query = st.text_input("Enter your search:", placeholder="e.g., action movie with car chase")
+        n_results = st.slider("Number of results:", 1, 10, 5)
+        
+        if st.button("Search", type="primary"):
+            if query:
+                with st.spinner("Searching..."):
+                    results = search_movies_cloud(query, n_results=n_results)
+                
+                if results['documents'] and len(results['documents'][0]) > 0:
+                    st.success(f"Found {len(results['documents'][0])} results")
+                    
+                    for i, (doc, dist) in enumerate(zip(
+                        results['documents'][0],
+                        results['distances'][0]
+                    ), 1):
+                        similarity = (2 - dist) / 2 * 100
+                        title = doc.split('\n')[0]
+                        with st.expander(f"{i}. {title} - Similarity: {similarity:.1f}%"):
+                            st.text(doc[:500])
+                else:
+                    st.warning("No results found.")
+            else:
+                st.warning("Please enter a search query.")
+    
+    elif page == "Clustering":
+        st.header("Document Clustering")
+        
+        st.markdown("Automatically group similar movies.")
+        
+        algorithm = st.selectbox("Algorithm", ["K-Means", "DBSCAN"])
+        
+        if algorithm == "K-Means":
+            n_clusters = st.slider("Number of Clusters", 3, 15, 8)
+        else:
+            eps = st.slider("Epsilon", 0.3, 1.5, 0.5, 0.1)
+            min_samples = st.slider("Min samples", 3, 10, 5)
+        
+        if st.button("Run Clustering", type="primary"):
+            with st.spinner(f"Running {algorithm}..."):
+                base_path = Path(__file__).parent / 'movies_knowledge_base'
+                embeddings_dir = base_path / 'data/processed/embeddings'
+                
+                try:
+                    clusterer = DocumentClusterer(str(embeddings_dir))
+                    
+                    if algorithm == "K-Means":
+                        labels = clusterer.cluster_kmeans(n_clusters=n_clusters)
+                    else:
+                        labels = clusterer.cluster_dbscan(eps=eps, min_samples=min_samples)
+                    
+                    analysis = clusterer.analyze_clusters()
+                    
+                    st.success("Clustering completed!")
+                    
+                    st.subheader("Cluster Analysis")
+                    st.dataframe(analysis[['cluster_name', 'n_documents', 'percentage']], use_container_width=True)
+                    
+                    st.subheader("Examples per Cluster")
+                    for _, row in analysis.head(5).iterrows():
+                        with st.expander(f"{row['cluster_name']} - {row['n_documents']} movies"):
+                            for title in row['sample_titles'][:3]:
+                                st.markdown(f"- {title}")
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+                    st.info("Clustering requires local embeddings. Run the pipeline first.")
+    
+    elif page == "Anomaly Detection":
+        st.header("Anomaly Detection")
+        
+        st.markdown("Identify unusual or problematic documents.")
+        
+        method = st.selectbox("Method", ["Isolation Forest", "Local Outlier Factor"])
+        contamination = st.slider("Expected % of anomalies", 0.01, 0.15, 0.05, 0.01)
+        
+        if st.button("Detect Anomalies", type="primary"):
+            with st.spinner(f"Running {method}..."):
+                base_path = Path(__file__).parent / 'movies_knowledge_base'
+                embeddings_dir = base_path / 'data/processed/embeddings'
+                
+                try:
+                    detector = AnomalyDetector(str(embeddings_dir))
+                    
+                    if method == "Isolation Forest":
+                        scores, is_anomaly = detector.detect_isolation_forest(contamination=contamination)
+                    else:
+                        scores, is_anomaly = detector.detect_lof(contamination=contamination)
+                    
+                    st.success("Detection completed!")
+                    
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.metric("Anomalies Detected", f"{is_anomaly.sum():,}")
+                    
+                    with col2:
+                        st.metric("Percentage", f"{(is_anomaly.sum()/len(is_anomaly)*100):.1f}%")
+
+                    st.subheader("Top 5 Anomalies")
+
+                    top_anomalies = detector.get_top_anomalies(n=5)
+
+                    for i, anom in enumerate(top_anomalies, 1):
+                        title = anom['text'].split('\n')[0] if '\n' in anom['text'] else anom['text'][:80]
+                        with st.expander(f"{i}. {title}"):
+                            st.text(anom['text'][:400])
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+                    st.info("Anomaly detection requires local embeddings. Run the pipeline first.")
+    
+    st.sidebar.markdown("---")
+    st.sidebar.caption("☁️ Powered by Chroma Cloud")
+
+if __name__ == "__main__":
+    main()
 
