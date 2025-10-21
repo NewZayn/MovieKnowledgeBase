@@ -65,7 +65,7 @@ chatbot = gr.ChatInterface(
 with gr.Blocks( css=css) as demo:
 
     gr.HTML("<center> <h1>Movie Knowledge Base Chatbot</h1> </center>")
-    gr.HTML("<center> <img src='https://media.giphy.com/media/3o7aD2saalBwwftBIY/giphy.gif' alt='Chatbot Animation' width='300'> </center>")
+    gr.HTML("<center> <img src='https://i.pinimg.com/originals/36/5e/68/365e6851d51814a090210f47911147ce.gif' alt='Chatbot Animation' width='300'> </center>")
     gr.HTML("</center>")
     chatbot.render()
 
