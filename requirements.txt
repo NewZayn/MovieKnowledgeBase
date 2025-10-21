@@ -1,0 +1,2 @@
+gradio[oauth]>=3.0
+huggingface-hub>=0.12

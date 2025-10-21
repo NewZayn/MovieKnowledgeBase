@@ -1,0 +1,61 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Data and databases
+movies_knowledge_base/chroma_db/
+movies_knowledge_base/data/
+*.sqlite3
+*.db
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+venv.bak/
+env.bak/
+movies_knowledge_base/.venv/
+
+# IDEs
+.vscode/
+.idea/
+movies_knowledge_base/.idea/
+*.swp
+*.swo
+
+
+# Streamlit
+.streamlit/
+movies_knowledge_base/.streamlit/
+
+# Logs
+*.log
+
+# OS
+*~
+.DS_Store
+Thumbs.db
+
+# Models
+movies_knowledge_base/models/
+
+# Git
+movies_knowledge_base/.git/
