@@ -1,21 +1,16 @@
-# Movies Knowledge Base
+---
+title: MovieKnowledgeBase
+emoji: 💬
+colorFrom: yellow
+colorTo: purple
+sdk: gradio
+sdk_version: 5.42.0
+app_file: app.py
+pinned: false
+hf_oauth: true
+hf_oauth_scopes:
+- inference-api
+license: mit
+---
 
-Sistema de busca semântica de filmes usando embeddings e Chroma Cloud.
-
-## Intrudução 
-
-Sistema que permite buscar filmes usando linguagem natural. Digite "filme de ação com perseguição" e encontre filmes similares por significado, não apenas palavras exatas.
-
-## Funcionamento
-
-1. 43.970 filmes do Kaggle transformados em embeddings (vetores de 384 dimensões)
-2. Armazenados no Chroma Cloud (banco vetorial)
-3. Busca por similaridade semântica usando sentence-transformers
-
-## Tecnologias
-
-- Python 3.12
-- Sentence-Transformers (all-MiniLM-L6-v2)
-- Chroma Cloud
-- Gradio + Streamlit
-- Scikit-learn
+An example chatbot using [Gradio](https://gradio.app), [`huggingface_hub`](https://huggingface.co/docs/huggingface_hub/v0.22.2/en/index), and the [Hugging Face Inference API](https://huggingface.co/docs/api-inference/index).
