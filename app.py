@@ -10,10 +10,17 @@ def welcome(name):
     return f"Welcome to Gradio, {name}!"
 
 css = """
-#warning {background-color: #FFCCCB}
-.feedback textarea {font-size: 24px !important}
+body {
+    background: #f5f5f5;
+}
+.gradio-container {
+    background: #f5f5f5 !important;
+}
+#warning {background-color: #f3dcd}
+.feedback textarea {font-size: 24px }
 .title {font-size: 32px !important; text-align: center;}
 """
+
 
 
 def respond(
@@ -47,28 +54,23 @@ For information on how to customize the ChatInterface, peruse the gradio docs: h
 chatbot = gr.ChatInterface(
     respond,
     type="messages",
-    additional_inputs=[
-       
-        gr.Textbox(value="You are a friendly Chatbot.", label="System message"),
-        gr.Slider(minimum=1, maximum=2048, value=512, step=1, label="Max new tokens"),
-        gr.Slider(minimum=0.1, maximum=4.0, value=0.7, step=0.1, label="Temperature"),
-        gr.Slider(
-            minimum=0.1,
-            maximum=1.0,
-            value=0.95,
-            step=0.05,
-            label="Top-p (nucleus sampling)",
-        ),
-    ],
 )
 
 with gr.Blocks( css=css) as demo:
 
-    gr.HTML("<center> <h1>Movie Knowledge Base Chatbot</h1> </center>")
-    gr.HTML("<center> <img src='https://i.pinimg.com/originals/36/5e/68/365e6851d51814a090210f47911147ce.gif' alt='Chatbot Animation' width='300'> </center>")
+
+    gr.HTML("""
+<center>
+    <img src='https://i.pinimg.com/originals/36/5e/68/365e6851d51814a090210f47911147ce.gif' 
+         alt='Chatbot Animation' 
+         width='300'
+         style='border-radius: 20px;'>
+</center>
+""")
     gr.HTML("</center>")
     chatbot.render()
 
 
 if __name__ == "__main__":
     demo.launch()
+
