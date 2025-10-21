@@ -1,112 +1,89 @@
-"""
-Dashboard Interativo Streamlit
-Interface de exploração visual para Movies Knowledge Base
-"""
-
-import streamlit as st
+import gradio as gr
+from huggingface_hub import InferenceClient
+import os
 import sys
-from pathlib import Path
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'movies_knowledge_base')))
+from src.application.search_cloud import search_movies_cloud as sear
+
+def welcome(name):
+    return f"Welcome to Gradio, {name}!"
+
+css = """
+body {
+    background: #f5f5f5;
+}
+.gradio-container {
+    background: #f5f5f5 !important;
+}
+#warning {background-color: #f3dcd}
+.feedback textarea {font-size: 24px }
+.title {font-size: 32px !important; text-align: center;}
+"""
 
 
-base_dir = Path(__file__).parent / 'movies_knowledge_base'
-sys.path.insert(0, str(base_dir.parent / 'movies_knowledge_base'))
 
-import chromadb
-from src.services.embedder import DocumentEmbedder
-from src.application.search_cloud import search_movies_cloud
-from src.config.chroma_config import CHROMA_API_KEY, CHROMA_TENANT, CHROMA_DATABASE
+def respond(
+    message,
+    history: list[dict[str, str]],
+    system_message,
+    max_tokens,
+    temperature,
+    top_p,
+):
+    """
+    For more information on `huggingface_hub` Inference API support, please check the docs: https://huggingface.co/docs/huggingface_hub/v0.22.2/en/guides/inference
+    """
+    response = ""
 
-st.set_page_config(
-    page_title="Movies Knowledge Base",
-    page_icon="🎬",
-    layout="wide"
+    results = sear(message, n_results=5)
+
+    if results['documents'] and len(results['documents'][0]) > 0:
+        documents = results['documents'][0]
+        for i, doc in enumerate(documents, 1):
+            response += f"{i}. {doc}\n"
+    else:
+        response = "No results found."
+
+    yield response
+
+
+"""
+For information on how to customize the ChatInterface, peruse the gradio docs: https://www.gradio.app/docs/chatinterface
+"""
+chatbot = gr.ChatInterface(
+    respond,
+    type="messages",
+    additional_inputs=[
+       
+        gr.Textbox(value="You are a friendly Chatbot.", label="System message"),
+        gr.Slider(minimum=1, maximum=2048, value=512, step=1, label="Max new tokens"),
+        gr.Slider(minimum=0.1, maximum=4.0, value=0.7, step=0.1, label="Temperature"),
+        gr.Slider(
+            minimum=0.1,
+            maximum=1.0,
+            value=0.95,
+            step=0.05,
+            label="Top-p (nucleus sampling)",
+        ),
+    ],
 )
 
-@st.cache_resource
-def load_cloud_collection():
-    """Conecta ao Chroma Cloud"""
-    client = chromadb.CloudClient(
-        api_key=CHROMA_API_KEY,
-        tenant=CHROMA_TENANT,
-        database=CHROMA_DATABASE
-    )
-    collection = client.get_collection("movies_docs")
-    return collection
+with gr.Blocks( css=css) as demo:
 
-@st.cache_resource
-def load_embedder():
-    """Carrega modelo de embeddings"""
-    return DocumentEmbedder(model_name='all-MiniLM-L6-v2')
 
-def main():
-    st.title("🎬 Movies Knowledge Base")
-    
-    st.sidebar.title("Navegação")
-    page = st.sidebar.radio(
-        "Escolha uma página",
-        ["Visão Geral", "Busca Semântica"]
-    )
-    
-    collection = load_cloud_collection()
-    embedder = load_embedder()
-    
-    if page == "Visão Geral":
-        st.header("Visão Geral do Sistema")
-        
-        total = collection.count()
-        
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.metric("Total de Filmes", f"{total:,}")
-        
-        with col2:
-            st.metric("Embedding Dimension", "384")
-        
-        with col3:
-            st.metric("Vector DB", "Chroma Cloud")
-        
-        st.markdown("---")
-        st.info("""
-        **Projeto Final - DSML**
-        
-        Sistema de busca semântica de filmes usando embeddings e ChromaDB.
-        """)
+    gr.HTML("""
+<center>
+    <img src='https://i.pinimg.com/originals/36/5e/68/365e6851d51814a090210f47911147ce.gif' 
+         alt='Chatbot Animation' 
+         width='300'
+         style='border-radius: 20px;'>
+</center>
+""")
+    gr.HTML("</center>")
+    chatbot.render()
 
-    elif page == "Busca Semântica":
-        st.header("Busca Semântica")
-        
-        st.markdown("Busque filmes usando linguagem natural.")
-        
-        query = st.text_input("Digite sua busca:", placeholder="ex: filme de ação com perseguição")
-        n_results = st.slider("Número de resultados:", 1, 10, 5)
-        
-        if st.button("Buscar", type="primary"):
-            if query:
-                with st.spinner("Buscando..."):
-                    results = search_movies_cloud(query, n_results=n_results)
-                
-                if results['documents'] and len(results['documents'][0]) > 0:
-                    st.success(f"Encontrados {len(results['documents'][0])} resultados")
-                    
-                    for i, (doc, dist, meta) in enumerate(zip(
-                        results['documents'][0],
-                        results['distances'][0],
-                        results['metadatas'][0]
-                    ), 1):
-                        similarity = (1 - dist) * 100
-                        title = doc.split('\n')[0]
-                        with st.expander(f"{i}. {title} - Similaridade: {similarity:.1f}%"):
-                            st.text(doc[:500])
-                else:
-                    st.warning("Nenhum resultado encontrado.")
-            else:
-                st.warning("Digite uma busca.")
-    
-
-    
-    st.sidebar.markdown("---")
-    st.sidebar.caption("☁️ Powered by Chroma Cloud")
 
 if __name__ == "__main__":
-    main()
+    demo.launch()
+
