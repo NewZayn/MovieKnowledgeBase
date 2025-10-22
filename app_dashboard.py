@@ -1,20 +1,22 @@
 """
-Dashboard Interativo Streamlit
-Interface de exploração visual para Movies Knowledge Base
+Interactive Streamlit Dashboard
+Visual exploration interface for Movies Knowledge Base
 """
 
 import streamlit as st
 import sys
 from pathlib import Path
 
-
 base_dir = Path(__file__).parent / 'movies_knowledge_base'
 sys.path.insert(0, str(base_dir.parent / 'movies_knowledge_base'))
 
-import chromadb
+import matplotlib.pyplot as plt
+from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score
 from src.services.embedder import DocumentEmbedder
 from src.application.search_cloud import search_movies_cloud
-from src.config.chroma_config import CHROMA_API_KEY, CHROMA_TENANT, CHROMA_DATABASE
+from src.repository.chroma_repository import ChromaRepository
+from src.services.clustering import DocumentClusterer
+from src.services.anomaly_detection import AnomalyDetector
 
 st.set_page_config(
     page_title="Movies Knowledge Base",
@@ -24,41 +26,35 @@ st.set_page_config(
 
 @st.cache_resource
 def load_cloud_collection():
-    """Conecta ao Chroma Cloud"""
-    client = chromadb.CloudClient(
-        api_key=CHROMA_API_KEY,
-        tenant=CHROMA_TENANT,
-        database=CHROMA_DATABASE
-    )
-    collection = client.get_collection("movies_docs")
-    return collection
+    repo = ChromaRepository()
+    return repo.get_collection()
 
 @st.cache_resource
 def load_embedder():
-    """Carrega modelo de embeddings"""
+    """Load embeddings model"""
     return DocumentEmbedder(model_name='all-MiniLM-L6-v2')
 
 def main():
     st.title("🎬 Movies Knowledge Base")
     
-    st.sidebar.title("Navegação")
-    page = st.sidebar.radio(
-        "Escolha uma página",
-        ["Visão Geral", "Busca Semântica"]
-    )
-    
     collection = load_cloud_collection()
     embedder = load_embedder()
     
-    if page == "Visão Geral":
-        st.header("Visão Geral do Sistema")
+    st.sidebar.title("Navigation")
+    page = st.sidebar.radio(
+        "Choose a page",
+        ["Overview", "Clustering", "Anomaly Detection"]
+    )
+    
+    if page == "Overview":
+        st.header("System Overview")
         
         total = collection.count()
         
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.metric("Total de Filmes", f"{total:,}")
+            st.metric("Total Movies", f"{total:,}")
         
         with col2:
             st.metric("Embedding Dimension", "384")
@@ -68,45 +64,124 @@ def main():
         
         st.markdown("---")
         st.info("""
-        **Projeto Final - DSML**
+        **Final Project - DSML**
         
-        Sistema de busca semântica de filmes usando embeddings e ChromaDB.
+        Semantic movie search system using embeddings and ChromaDB.
         """)
 
-    elif page == "Busca Semântica":
-        st.header("Busca Semântica")
+    if page == "Clustering":
+        st.header("Document Clustering")
         
-        st.markdown("Busque filmes usando linguagem natural.")
+        st.markdown("Automatically group similar movies.")
         
-        query = st.text_input("Digite sua busca:", placeholder="ex: filme de ação com perseguição")
-        n_results = st.slider("Número de resultados:", 1, 10, 5)
+        algorithm = st.selectbox("Algorithm", ["K-Means", "DBSCAN"])
         
-        if st.button("Buscar", type="primary"):
-            if query:
-                with st.spinner("Buscando..."):
-                    results = search_movies_cloud(query, n_results=n_results)
+        if algorithm == "K-Means":
+            n_clusters = st.slider("Number of Clusters", 3, 15, 8)
+        else:
+            eps = st.slider("Epsilon", 0.3, 1.5, 0.5, 0.1)
+            min_samples = st.slider("Min samples", 3, 10, 5)
+        
+        if st.button("Run Clustering", type="primary"):
+            with st.spinner(f"Running {algorithm}..."):
+                base_path = Path(__file__).parent / 'movies_knowledge_base'
+                embeddings_dir = base_path / 'data/processed/embeddings'
                 
-                if results['documents'] and len(results['documents'][0]) > 0:
-                    st.success(f"Encontrados {len(results['documents'][0])} resultados")
+                try:
+                    clusterer = DocumentClusterer(str(embeddings_dir))
                     
-                    for i, (doc, dist, meta) in enumerate(zip(
-                        results['documents'][0],
-                        results['distances'][0],
-                        results['metadatas'][0]
-                    ), 1):
-                        similarity = (1 - dist) * 100
-                        title = doc.split('\n')[0]
-                        with st.expander(f"{i}. {title} - Similaridade: {similarity:.1f}%"):
-                            st.text(doc[:500])
-                else:
-                    st.warning("Nenhum resultado encontrado.")
-            else:
-                st.warning("Digite uma busca.")
+                    if algorithm == "K-Means":
+                        labels = clusterer.cluster_kmeans(n_clusters=n_clusters)
+                    else:
+                        labels = clusterer.cluster_dbscan(eps=eps, min_samples=min_samples)
+                    
+                    analysis = clusterer.analyze_clusters()
+                    
+                    silhouette = silhouette_score(clusterer.embeddings, labels)
+                    davies_bouldin = davies_bouldin_score(clusterer.embeddings, labels)
+                    calinski = calinski_harabasz_score(clusterer.embeddings, labels)
+                    
+                    st.success("Clustering completed!")
+                    
+                    st.subheader("Clustering Metrics")
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Silhouette Score", f"{silhouette:.3f}", help="Range: [-1, 1]. Higher is better.")
+                    with col2:
+                        st.metric("Davies-Bouldin Index", f"{davies_bouldin:.3f}", help="Lower is better.")
+                    with col3:
+                        st.metric("Calinski-Harabasz Index", f"{calinski:.1f}", help="Higher is better.")
+                    
+                    st.markdown("")
+                    st.subheader("Cluster Distribution")
+                    fig, ax = plt.subplots(figsize=(10, 5))
+                    cluster_counts = analysis['n_documents'].values
+                    cluster_names = analysis['cluster_name'].values
+                    ax.bar(cluster_names, cluster_counts, color='steelblue', edgecolor='black')
+                    ax.set_xlabel('Cluster')
+                    ax.set_ylabel('Number of Movies')
+                    ax.set_title('Movies per Cluster')
+                    plt.xticks(rotation=45, ha='right')
+                    st.pyplot(fig)
+                    
+                    st.markdown("---")
+                    
+                    st.subheader("Cluster Analysis")
+                    st.dataframe(analysis[['cluster_name', 'n_documents', 'percentage']], use_container_width=True)
+                    
+                    st.markdown("---")
+                    st.subheader("Examples per Cluster")
+                    for _, row in analysis.head(5).iterrows():
+                        with st.expander(f"{row['cluster_name']} - {row['n_documents']} movies"):
+                            for title in row['sample_titles'][:3]:
+                                st.markdown(f"- {title}")
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+                    st.info("Clustering requires local embeddings. Run the pipeline first.")
     
+    elif page == "Anomaly Detection":
+        st.header("Anomaly Detection")
+        
+        st.markdown("Identify unusual or problematic documents.")
+        
+        method = st.selectbox("Method", ["Isolation Forest", "Local Outlier Factor"])
+        contamination = st.slider("Expected % of anomalies", 0.01, 0.15, 0.05, 0.01)
+        
+        if st.button("Detect Anomalies", type="primary"):
+            with st.spinner(f"Running {method}..."):
+                base_path = Path(__file__).parent / 'movies_knowledge_base'
+                embeddings_dir = base_path / 'data/processed/embeddings'
+                
+                try:
+                    detector = AnomalyDetector(str(embeddings_dir))
+                    
+                    if method == "Isolation Forest":
+                        scores, is_anomaly = detector.detect_isolation_forest(contamination=contamination)
+                    else:
+                        scores, is_anomaly = detector.detect_lof(contamination=contamination)
+                    
+                    st.success("Detection completed!")
+                    
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.metric("Anomalies Detected", f"{is_anomaly.sum():,}")
+                    
+                    with col2:
+                        st.metric("Percentage", f"{(is_anomaly.sum()/len(is_anomaly)*100):.1f}%")
 
+                    st.subheader("Top 5 Anomalies")
+
+                    top_anomalies = detector.get_top_anomalies(n=5)
+
+                    for i, anom in enumerate(top_anomalies, 1):
+                        title = anom['text'].split('\n')[0] if '\n' in anom['text'] else anom['text'][:80]
+                        with st.expander(f"{i}. {title}"):
+                            st.text(anom['text'][:400])
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+                    st.info("Anomaly detection requires local embeddings. Run the pipeline first.")
     
-    st.sidebar.markdown("---")
-    st.sidebar.caption("☁️ Powered by Chroma Cloud")
 
 if __name__ == "__main__":
     main()

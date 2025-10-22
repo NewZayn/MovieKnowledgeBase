@@ -10,11 +10,19 @@ def welcome(name):
     return f"Welcome to Gradio, {name}!"
 
 css = """
-#warning {background-color: #FFCCCB}
-.feedback textarea {font-size: 24px !important}
-.title {font-size: 32px !important; text-align: center;}
+body {
+    background: #f5f5f5;
+}
+.gradio-container {
+    background: #f5f5f5 ;
+}
+#warning {background-color: #f3dcd}
+.feedback textarea {font-size: 24px }
+.title {font-size: 32px ; text-align: center;}
 """
 
+def prompt_template():
+    return """You are a helpful assistant that helps users find information about movies from a knowledge base. Use the following pieces of context to answer the question at the end. If you don't know the answer, just say that you don't know, don't try to make up an answer."""
 
 def respond(
     message,
@@ -33,8 +41,9 @@ def respond(
 
     if results['documents'] and len(results['documents'][0]) > 0:
         documents = results['documents'][0]
-        for i, doc in enumerate(documents, 1):
-            response += f"{i}. {doc}\n"
+        distances = results['distances'][0]
+        for i, (doc, dist) in enumerate(zip(documents, distances), 1):
+            response += f"{i}. {doc}\n   Distance: {dist:.4f}\n\n"
     else:
         response = "No results found."
 
@@ -47,25 +56,19 @@ For information on how to customize the ChatInterface, peruse the gradio docs: h
 chatbot = gr.ChatInterface(
     respond,
     type="messages",
-    additional_inputs=[
-       
-        gr.Textbox(value="You are a friendly Chatbot.", label="System message"),
-        gr.Slider(minimum=1, maximum=2048, value=512, step=1, label="Max new tokens"),
-        gr.Slider(minimum=0.1, maximum=4.0, value=0.7, step=0.1, label="Temperature"),
-        gr.Slider(
-            minimum=0.1,
-            maximum=1.0,
-            value=0.95,
-            step=0.05,
-            label="Top-p (nucleus sampling)",
-        ),
-    ],
 )
 
 with gr.Blocks( css=css) as demo:
 
-    gr.HTML("<center> <h1>Movie Knowledge Base Chatbot</h1> </center>")
-    gr.HTML("<center> <img src='https://media.giphy.com/media/3o7aD2saalBwwftBIY/giphy.gif' alt='Chatbot Animation' width='300'> </center>")
+
+    gr.HTML("""
+<center>
+    <img src='https://i.pinimg.com/originals/36/5e/68/365e6851d51814a090210f47911147ce.gif' 
+         alt='Chatbot Animation' 
+         width='300'
+         style='border-radius: 20px;'>
+</center>
+""")
     gr.HTML("</center>")
     chatbot.render()
 

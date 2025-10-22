@@ -122,23 +122,20 @@ def main():
     df_results.to_csv(results_path, index=False)
     print(f"\n✓ Resultados salvos em: {results_path}")
     
-    print("\n" + "=" * 80)
     print("MÉTRICAS DE AVALIAÇÃO")
-    print("=" * 80)
     print(f"Total de consultas:              {metrics['total_queries']}")
     print(f"Encontrados no Top-5:            {metrics['found_in_top_k']} ({metrics['precision_at_k']*100:.2f}%)")
     print(f"Similaridade média (Top-1):      {metrics['avg_top1_similarity']*100:.2f}%")
     print(f"Similaridade média (Top-5):      {metrics['avg_all_similarity']*100:.2f}%")
     print(f"Matches perfeitos (≥99%):        {metrics['perfect_matches']} ({metrics['perfect_matches']/metrics['total_queries']*100:.2f}%)")
     print(f"Alta qualidade (≥80%):           {metrics['high_quality']} ({metrics['high_quality']/metrics['total_queries']*100:.2f}%)")
-    print("=" * 80)
     
-    print("\n📊 Melhores resultados (Top 5):")
+    print("\n  Melhores resultados (Top 5):")
     top_results = df_results.nlargest(5, 'top1_similarity')
     for idx, row in top_results.iterrows():
         print(f"  • {row['query_file']}: {row['top1_similarity']*100:.2f}% similaridade")
     
-    print("\n📉 Piores resultados (Bottom 5):")
+    print("\n Piores resultados (Bottom 5):")
     bottom_results = df_results.nsmallest(5, 'top1_similarity')
     for idx, row in bottom_results.iterrows():
         print(f"  • {row['query_file']}: {row['top1_similarity']*100:.2f}% similaridade")

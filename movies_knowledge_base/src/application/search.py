@@ -1,7 +1,6 @@
 import os
 import sys
 
-# Adicionar o caminho correto para os módulos
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from src.data.vector_db import VectorDatabase
@@ -38,11 +37,10 @@ def main():
 
         if not query:
             continue
-
+        
         results = search_movies(query, n_results=5)
 
         if results['metadatas'][0] and results['metadatas'][0][0].get('error'):
-            print(f"\n❌ Erro: {results['documents'][0][0]}")
             continue
 
         if results['documents'] and len(results['documents'][0]) > 0:
