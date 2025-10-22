@@ -1,7 +1,5 @@
-"""
-Módulo de Detecção de Anomalias
-Implementa Isolation Forest, LOF e análise de outliers
-"""
+# Detecção de anomalias em embeddings
+# Usa Isolation Forest e LOF pra achar documentos estranhos
 
 import numpy as np
 import pandas as pd
@@ -16,7 +14,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 class AnomalyDetector:
-    """Classe para detecção de anomalias em documentos"""
     
     def __init__(self, embeddings_dir: str):
         self.embeddings_dir = Path(embeddings_dir)
@@ -37,8 +34,8 @@ class AnomalyDetector:
         with open(documents_path, 'rb') as f:
             self.documents = pickle.load(f)
         
-        print(f"✓ Loaded {len(self.documents)} documents")
-        print(f"  Embedding shape: {self.embeddings.shape}")
+        print(f"Carregados {len(self.documents)} documentos")
+        print(f"Shape: {self.embeddings.shape}")
     
     def detect_isolation_forest(self, 
                                contamination: float = 0.1,
@@ -53,7 +50,7 @@ class AnomalyDetector:
         Returns:
             (anomaly_scores, is_anomaly) - scores negativos indicam anomalias
         """
-        print(f"\nDetecting anomalies with Isolation Forest (contamination={contamination})...")
+        print(f"\nRodando Isolation Forest (contamination={contamination})...")
         
         self.detector = IsolationForest(
             contamination=contamination,
@@ -71,14 +68,13 @@ class AnomalyDetector:
         n_anomalies = self.is_anomaly.sum()
         percentage = (n_anomalies / len(self.embeddings)) * 100
         
-        print(f"\n✓ Isolation Forest detection complete")
-        print(f"  Anomalies detected: {n_anomalies} ({percentage:.1f}%)")
-        print(f"  Normal documents: {(~self.is_anomaly).sum()} ({100-percentage:.1f}%)")
-        
-        print(f"\nAnomaly score statistics:")
-        print(f"  Min (most anomalous): {self.anomaly_scores.min():.4f}")
-        print(f"  Mean: {self.anomaly_scores.mean():.4f}")
-        print(f"  Max (most normal): {self.anomaly_scores.max():.4f}")
+        print(f"\nResultados:")
+        print(f"  Anomalias: {n_anomalies} ({percentage:.1f}%)")
+        print(f"  Normais: {(~self.is_anomaly).sum()} ({100-percentage:.1f}%)")
+        print(f"\nScores:")
+        print(f"  Mais anômalo: {self.anomaly_scores.min():.4f}")
+        print(f"  Média: {self.anomaly_scores.mean():.4f}")
+        print(f"  Mais normal: {self.anomaly_scores.max():.4f}")
         
         return self.anomaly_scores, self.is_anomaly
     
@@ -95,7 +91,7 @@ class AnomalyDetector:
         Returns:
             (anomaly_scores, is_anomaly)
         """
-        print(f"\nDetecting anomalies with LOF (n_neighbors={n_neighbors}, contamination={contamination})...")
+        print(f"\nRodando LOF (vizinhos={n_neighbors}, contamination={contamination})...")
         
         self.detector = LocalOutlierFactor(
             n_neighbors=n_neighbors,
@@ -112,9 +108,9 @@ class AnomalyDetector:
         n_anomalies = self.is_anomaly.sum()
         percentage = (n_anomalies / len(self.embeddings)) * 100
         
-        print(f"\n✓ LOF detection complete")
-        print(f"  Anomalies detected: {n_anomalies} ({percentage:.1f}%)")
-        print(f"  Normal documents: {(~self.is_anomaly).sum()} ({100-percentage:.1f}%)")
+        print(f"\nResultados:")
+        print(f"  Anomalias: {n_anomalies} ({percentage:.1f}%)")
+        print(f"  Normais: {(~self.is_anomaly).sum()} ({100-percentage:.1f}%)")
         
         return self.anomaly_scores, self.is_anomaly
     
@@ -128,7 +124,7 @@ class AnomalyDetector:
         Returns:
             (anomaly_scores, is_anomaly)
         """
-        print(f"\nDetecting anomalies with Elliptic Envelope (contamination={contamination})...")
+        print(f"\nRodando Elliptic Envelope (contamination={contamination})...")
         
         self.detector = EllipticEnvelope(
             contamination=contamination,
@@ -142,8 +138,7 @@ class AnomalyDetector:
         n_anomalies = self.is_anomaly.sum()
         percentage = (n_anomalies / len(self.embeddings)) * 100
         
-        print(f"\n✓ Elliptic Envelope detection complete")
-        print(f"  Anomalies detected: {n_anomalies} ({percentage:.1f}%)")
+        print(f"\nResultados: {n_anomalies} anomalias ({percentage:.1f}%)")
         
         return self.anomaly_scores, self.is_anomaly
     

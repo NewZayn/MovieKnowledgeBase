@@ -10,32 +10,27 @@ import numpy as np
 
 class EnhancedSearch:
     def __init__(self, chroma_dir, embeddings_dir):
-        self.embedder = DocumentEmbedder(model_name='all-MiniLM-L6-v2')
+        self.embedder = DocumentEmbedder(model_name='all-mpnet-base-v2')
         self.db = VectorDatabase(db_path=chroma_dir, collection_name="movies_docs")
         self.db.create_collection(reset=False)
         
-        # Carregar clustering
         self.clusterer = DocumentClusterer(embeddings_dir)
         self.clusterer.cluster_kmeans(n_clusters=20)
         
-        # Carregar detector de anomalias
         self.detector = AnomalyDetector(embeddings_dir)
         self.detector.detect_isolation_forest(contamination=0.05)
     
     def search_with_recommendations(self, query, n_results=5, n_similar=3):
         """Busca com recomendações do mesmo cluster"""
-        # 1. Busca semântica normal
         query_emb = self.embedder.model.encode([query], normalize_embeddings=True)[0]
         results = self.db.search(query_embedding=query_emb, n_results=n_results)
         
         if not results['documents'][0]:
             return {'main_results': [], 'recommendations': []}
         
-        # 2. Pegar cluster do primeiro resultado
         first_doc_idx = self._get_doc_index(results['metadatas'][0][0]['filename'])
         cluster_id = self.clusterer.labels[first_doc_idx]
         
-        # 3. Buscar outros filmes do mesmo cluster
         cluster_docs = np.where(self.clusterer.labels == cluster_id)[0]
         recommendations = []
         
@@ -75,7 +70,6 @@ class EnhancedSearch:
         ):
             doc_idx = self._get_doc_index(meta['filename'])
             
-            # Só incluir se NÃO for anomalia
             if not self.detector.is_anomaly[doc_idx]:
                 filtered_results['documents'][0].append(doc)
                 filtered_results['distances'][0].append(dist)

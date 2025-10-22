@@ -14,14 +14,18 @@ body {
     background: #f5f5f5;
 }
 .gradio-container {
-    background: #f5f5f5 !important;
+    background: #f5f5f5 ;
 }
 #warning {background-color: #f3dcd}
 .feedback textarea {font-size: 24px }
-.title {font-size: 32px !important; text-align: center;}
+.title {font-size: 32px ; text-align: center;}
 """
 
+def prompt_template():
+    return """You are a helpful assistant that helps users find information about movies from a knowledge base. Use the following pieces of context to answer the question at the end. If you don't know the answer, just say that you don't know, don't try to make up an answer."""
 
+def prompt_template():
+    return """You are a helpful assistant that helps users find information about movies from a knowledge base. Use the following pieces of context to answer the question at the end. If you don't know the answer, just say that you don't know, don't try to make up an answer."""
 
 def respond(
     message,
@@ -40,8 +44,9 @@ def respond(
 
     if results['documents'] and len(results['documents'][0]) > 0:
         documents = results['documents'][0]
-        for i, doc in enumerate(documents, 1):
-            response += f"{i}. {doc}\n"
+        distances = results['distances'][0]
+        for i, (doc, dist) in enumerate(zip(documents, distances), 1):
+            response += f"{i}. {doc}\n   Distance: {dist:.4f}\n\n"
     else:
         response = "No results found."
 

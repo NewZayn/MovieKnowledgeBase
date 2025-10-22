@@ -1,6 +1,9 @@
+# Application Framework
+
 gradio[oauth]>=3.0
 huggingface-hub>=0.12
 streamlit-chat>=0.1.0
+
 
 # Core ML and Embeddings
 sentence-transformers>=3.0.0

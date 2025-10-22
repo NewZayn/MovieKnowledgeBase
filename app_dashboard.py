@@ -10,12 +10,11 @@ from pathlib import Path
 base_dir = Path(__file__).parent / 'movies_knowledge_base'
 sys.path.insert(0, str(base_dir.parent / 'movies_knowledge_base'))
 
-import chromadb
 import matplotlib.pyplot as plt
 from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score
 from src.services.embedder import DocumentEmbedder
 from src.application.search_cloud import search_movies_cloud
-from src.config.chroma_config import CHROMA_API_KEY, CHROMA_TENANT, CHROMA_DATABASE
+from src.repository.chroma_repository import ChromaRepository
 from src.services.clustering import DocumentClusterer
 from src.services.anomaly_detection import AnomalyDetector
 
@@ -27,13 +26,8 @@ st.set_page_config(
 
 @st.cache_resource
 def load_cloud_collection():
-    client = chromadb.CloudClient(
-        api_key=CHROMA_API_KEY,
-        tenant=CHROMA_TENANT,
-        database=CHROMA_DATABASE
-    )
-    collection = client.get_collection("movies_docs")
-    return collection
+    repo = ChromaRepository()
+    return repo.get_collection()
 
 @st.cache_resource
 def load_embedder():
