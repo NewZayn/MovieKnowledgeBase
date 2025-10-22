@@ -1,6 +1,6 @@
 ## DOC - MOVIEKNOWLEDGEBASE
 
-This repository contains the code for a Movie Knowledge Base chatbot application. The application leverages Gradio for the user interface.
+This repository contains the code for a Movie Knowledge Base chatbot application.  
 
 # Movies Knowledge Base
 
