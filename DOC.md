@@ -4,7 +4,25 @@ This repository contains the code for a Movie Knowledge Base chatbot application
 
 # Movies Knowledge Base
 
-Semantic search system for movies using embeddings and Chroma Cloud.
+Semantic search system for movies using embeddings and Chroma Cloud. Enter details like context, characters, or actors, and it will find the most relevant matches.
+
+```bash
+   Leonardo Dicaprio in a movie that he build plans
+```
+
+```bash
+   The Amazing Spider-Man (2012)
+    Genres: Action, Adventure, Fantasy
+    Director: Marc Webb
+    Cast: Andrew Garfield, Emma Stone, Rhys Ifans, Denis Leary, Campbell Scott
+    Rating: 6.5/10 (7K votes)
+    Runtime: 136 min
+    Peter Parker is an outcast high schooler abandoned by his parents as a boy, leaving him to be raised by his Uncle Ben and Aunt May. Like most teenagers, Peter is trying to figure out who he is and how he got to be the person he is today. As Peter discovers a mysterious briefcase that belonged to his father, he begins a quest to understand his parents' disappearance – leading him directly to Oscorp and the lab of Dr. Curt Connors, his father's former partner. As Spider-Man is set on a collision course with Connors' alter ego, The Lizard, Peter will make life-altering choices to use his powers and shape his destiny to become a hero.
+    Distance: 0.8308
+```
+
+
+
 
 
 ## Execution 
