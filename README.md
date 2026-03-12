@@ -23,6 +23,16 @@ license: mit
 
 ### End date: 12/2025
 
+### Skills applied :
+
+  Natural Language Processing (NLP)
+  
+  Semantic Search
+  
+  Vector Embeddings
+  
+  Information Retrieval
+
 
 # Descripition 
 
