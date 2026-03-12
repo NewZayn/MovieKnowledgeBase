@@ -13,6 +13,16 @@ hf_oauth_scopes:
 license: mit
 ---
 
+## Job Title: Movie Knowledge Base – Semantic Movie Search System
+
+## Profile: AI / Machine Learning Developer
+
+## Employer: Academic Project – Jala University
+
+## Start date: 09/2025
+
+## End date: 12/2025
+
 ## DOC - MOVIEKNOWLEDGEBASE
 
 This repository contains the code for a Movie Knowledge Base chatbot application. The application leverages Gradio for the user interface, Hugging Face's Inference API for natural language processing, and a vector database for storing and retrieving movie-related information.
