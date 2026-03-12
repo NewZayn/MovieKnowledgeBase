@@ -33,17 +33,26 @@ license: mit
   
   Information Retrieval
 
+## Tools : 
 
-# Descripition 
+- Python 3.12
 
-## DOC - MOVIEKNOWLEDGEBASE
+## Frameworks : 
+- Sentence-Transformers (all-MiniLM-L6-v2)
+- Chroma Cloud
+- Gradio + Streamlit
+- Scikit-learn
 
-This repository contains the code for a Movie Knowledge Base chatbot application. The application leverages Gradio for the user interface, Hugging Face's Inference API for natural language processing, and a vector database for storing and retrieving movie-related information.
 
 
 # Movies Knowledge Base
 
-Semantic search system for movies using embeddings and Chroma Cloud.
+## Descripition 
+
+### DOC - MOVIEKNOWLEDGEBASE
+
+This repository contains the code for a Movie Knowledge Base chatbot application. The application leverages Gradio for the user interface, Hugging Face's Inference API for natural language processing, and a vector database for storing and retrieving movie-related information.
+
 
 ## Introduction
 
@@ -55,12 +64,4 @@ A system that allows searching for movies using natural language. Type "action m
 2. Stored in Chroma Cloud (vector database)
 3. Semantic similarity search using sentence-transformers
 
-## Tools : 
 
-- Python 3.12
-
-## Frameworks : 
-- Sentence-Transformers (all-MiniLM-L6-v2)
-- Chroma Cloud
-- Gradio + Streamlit
-- Scikit-learn
