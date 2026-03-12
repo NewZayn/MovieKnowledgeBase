@@ -13,15 +13,18 @@ hf_oauth_scopes:
 license: mit
 ---
 
-## Job Title: Movie Knowledge Base – Semantic Movie Search System
+### Job Title: Movie Knowledge Base – Semantic Movie Search System
 
-## Profile: AI / Machine Learning Developer
+###  Profile: AI / Machine Learning Developer
 
-## Employer: Academic Project – Jala University
+### Employer: Academic Project – Jala University
 
-## Start date: 09/2025
+### Start date: 09/2025
 
-## End date: 12/2025
+### End date: 12/2025
+
+
+# Descripition 
 
 ## DOC - MOVIEKNOWLEDGEBASE
 
