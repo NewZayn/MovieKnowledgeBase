@@ -55,9 +55,11 @@ A system that allows searching for movies using natural language. Type "action m
 2. Stored in Chroma Cloud (vector database)
 3. Semantic similarity search using sentence-transformers
 
-## Technologies
+## Tools : 
 
 - Python 3.12
+
+## Frameworks : 
 - Sentence-Transformers (all-MiniLM-L6-v2)
 - Chroma Cloud
 - Gradio + Streamlit
