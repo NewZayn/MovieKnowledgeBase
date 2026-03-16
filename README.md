@@ -4,7 +4,7 @@ emoji: 💬
 colorFrom: yellow
 colorTo: purple
 sdk: gradio
-sdk_version: 5.42.0
+sdk_version: 6.9.0
 app_file: app.py
 pinned: false
 hf_oauth: true
@@ -63,5 +63,3 @@ A system that allows searching for movies using natural language. Type "action m
 1. 43,970 movies from Kaggle transformed into embeddings (384-dimensional vectors)
 2. Stored in Chroma Cloud (vector database)
 3. Semantic similarity search using sentence-transformers
-
-
