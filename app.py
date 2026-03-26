@@ -24,8 +24,7 @@ body {
 def prompt_template():
     return """You are a helpful assistant that helps users find information about movies from a knowledge base. Use the following pieces of context to answer the question at the end. If you don't know the answer, just say that you don't know, don't try to make up an answer."""
 
-def prompt_template():
-    return """You are a helpful assistant that helps users find information about movies from a knowledge base. Use the following pieces of context to answer the question at the end. If you don't know the answer, just say that you don't know, don't try to make up an answer."""
+
 
 def respond(
     message,
@@ -39,6 +38,7 @@ def respond(
     For more information on `huggingface_hub` Inference API support, please check the docs: https://huggingface.co/docs/huggingface_hub/v0.22.2/en/guides/inference
     """
     response = ""
+
 
     results = sear(message, n_results=5)
 
@@ -56,9 +56,18 @@ def respond(
 """
 For information on how to customize the ChatInterface, peruse the gradio docs: https://www.gradio.app/docs/chatinterface
 """
-chatbot = gr.ChatInterface(
-    respond,
-    type="messages",
+
+history = [
+    {"role": "assistant", "content": "Hello, I'm a semantic search about movies, you can put some informations about movies, and I will try guess what movie is😉"},
+]
+
+chatbot = gr.Chatbot( history)
+
+
+chat = gr.ChatInterface(
+    fn=respond,
+    title="Movie Knowledge Chat",
+    chatbot=chatbot
 )
 
 with gr.Blocks( css=css) as demo:
@@ -73,9 +82,8 @@ with gr.Blocks( css=css) as demo:
 </center>
 """)
     gr.HTML("</center>")
-    chatbot.render()
+    chat.render()
 
 
 if __name__ == "__main__":
     demo.launch()
-
